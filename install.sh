@@ -114,9 +114,6 @@ install_dependent_packages() {
     return 0
 }
 
-download_wireguard_ui(){
-
-}
 
 
 
