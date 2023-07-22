@@ -52,7 +52,7 @@ package_manager_detect() {
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
         PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
-        INSTALLER_DEPS=(git openrc grep tar)
+        INSTALLER_DEPS=(curl git openrc grep tar)
         WG_DEPS=(wget wireguard-tools)
     # If apk package managers was not found
     else
@@ -61,15 +61,6 @@ package_manager_detect() {
         # so exit the installer
         exit
     fi
-}
-
-stop_service() {
-    # Stop service passed in as argument.
-    # Can softfail, as process may not be installed when this is called
-    local str="Stopping ${1} service"
-    printf "  %b %s..." "${INFO}" "${str}"
-    service "${1}" stop &> /dev/null || true
-    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
 }
 
 # Start/Restart service passed in as argument
@@ -89,20 +80,6 @@ enable_service() {
     rc-update add "${1}" &> /dev/null
     printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
 }
-
-# Disable service so that it will not with next reboot
-disable_service() {
-    # Local, named variables
-    local str="Disabling ${1} service"
-    printf "  %b %s..." "${INFO}" "${str}"
-    rc-update del "${1}" &> /dev/null
-    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
-}
-
-check_service_active() {
-    rc-update show "${1}" &> /dev/null
-}
-
 
 install_dependent_packages() {
     # Install packages passed in via argument array
@@ -135,6 +112,10 @@ install_dependent_packages() {
     fi
     printf "\\n"
     return 0
+}
+
+download_wireguard_ui(){
+
 }
 
 
