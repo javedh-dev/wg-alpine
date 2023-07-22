@@ -39,7 +39,7 @@ os_check() {
         printf "\n%b ${detected_os} is not yet supported\n\n" "${CROSS}"
         exit 1
     else
-        printf "%b OS : %b-%b " "${TICK}" "${detected_os}" "${detected_version}"
+        printf "\n%b OS : %b-%b " "${TICK}" "${detected_os}" "${detected_version}"
     fi
 }
 
