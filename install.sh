@@ -196,9 +196,11 @@ show_completion() {
     printf "  You can access wireguard UI at - http://%b:5000\n" "${MY_IP}"
     printf "  Username : admin\n"
     printf "  Password : admin\n"
+    printf "\n\n"
 }
 
 start_setup() {
+    clear
     show_ascii_logo
     os_check
     package_manager_detect
@@ -208,7 +210,7 @@ start_setup() {
     enable_service "wg-alpine"
     restart_service "wg-alpine"
     show_completion
-    printf "\n\n"
+
 }
 
 start_setup
