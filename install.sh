@@ -141,8 +141,8 @@ download_wireguard_ui(){
     printf "\n  %b Determining download url" "${INFO}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/109655349/assets | jq -r 'map(select(.browser_download_url | test("linux-'"${OS_ARCH}"'.tar.gz$")) .browser_download_url) | .[0]')
     printf "%b  %b Downloading from url - \"%b\"\n" "${OVER}" "${INFO}" "${DOWNLOAD_URL}"
-    
-    wget ${DOWNLOAD_URL}
+    wget -q ${DOWNLOAD_URL} -o wireguard-ui.tar.gz
+    printf "%b  %b Download complete\n" "${OVER}" "${TICK}"
 }
 
 
