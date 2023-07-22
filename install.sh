@@ -151,6 +151,15 @@ download_wireguard_ui() {
     printf "%b%b  %b Download complete\n" "${OVER}" "${OVER}" "${TICK}"
 }
 
+setup_wgui() {
+    printf "\n%b Setting Up WGUI" "${INFO}"
+
+    printf "\n  %b Extracting binary" "${INFO}"
+    tar -xvf wireguard-ui.tar.gz
+    printf "\n  %b Extracted Successfully" "${TICK}"
+
+}
+
 start_setup() {
     show_ascii_logo
     os_check
