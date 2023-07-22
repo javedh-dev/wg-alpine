@@ -47,7 +47,7 @@ os_check() {
 package_manager_detect() {
     printf "\n\n%b Detecting Package Manager." "${INFO}"
     if is_command apk ; then
-        printf "%b%b APK package manage in detected." "${OVER}" "${TICK}"
+        printf "%b%b APK package manager in detected." "${OVER}" "${TICK}"
         PKG_MANAGER="apk"
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
@@ -146,6 +146,8 @@ start_setup() {
     printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
     printf "\n\n%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
     install_dependent_packages "${INSTALLER_DEPS[@]}"
+    printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
+    install_dependent_packages "${WG_DEPS[@]}"
     printf "\n\n"
 }
 
