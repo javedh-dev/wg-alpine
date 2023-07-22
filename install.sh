@@ -31,12 +31,15 @@ is_command() {
 }
 
 os_check() {
+    printf "%b Detecting Operating System." "${INFO}"
     detected_os=$(grep "\bID\b" /etc/os-release | cut -d '=' -f2 | tr -d '"')
     detected_version=$(grep VERSION_ID /etc/os-release | cut -d '=' -f2 | tr -d '"')
     if ! grep -iq "alpine" <(echo "$detected_os"); then
         printf "%b This installer only supports Alpine Linux." "${INFO}"
         printf "\n%b ${detected_os} is not yet supported\n\n" "${CROSS}"
         exit 1
+    else
+        printf "%b OS : %b-%b " "${TICK}" "${detected_os}" "${detected_version}"
     fi
 }
 
