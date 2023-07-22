@@ -144,7 +144,7 @@ start_setup() {
     os_check
     package_manager_detect
     printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
-    printf "%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
+    printf "\n\n%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
     install_dependent_packages "${INSTALLER_DEPS[@]}"
     printf "\n\n"
 }
