@@ -114,7 +114,15 @@ install_dependent_packages() {
     return 0
 }
 
+download_wireguard_ui(){
+    WGUI_URL="https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/"
+    printf "\n%b Downloading Wireguard UI..." "${INFO}" "${PKG_MANAGER}" "${installArray[*]}"
+    #  curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/109655349/assets | jq 'map(select(.browser_download_url | test("linux-amd64.tar.gz$")) .browser_download_url) | .[0]'
 
+    printf "\n  %b Determining Latest release version" "${INFO}"
+    LATEST_RELEASE=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases | jq 'max_by(.id) .id')
+    printf "\n  %b%b Latest version is %b" "${OVER}" "${INFO}" "${LATEST_RELEASE}"
+}
 
 
 start_setup() {
@@ -126,6 +134,7 @@ start_setup() {
     install_dependent_packages "${INSTALLER_DEPS[@]}"
     printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
     install_dependent_packages "${WG_DEPS[@]}"
+    download_wireguard_ui
     printf "\n\n"
 }
 
