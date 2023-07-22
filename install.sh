@@ -140,9 +140,9 @@ download_wireguard_ui() {
     printf "%b  %b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
 
     printf "\n  %b Setting up temp directory" "${INFO}"
-    rm -rf /usr/share/wireguard/temp
-    mkdir -p /usr/share/wireguard/temp
-    cd /usr/share/wireguard/temp
+    rm -rf /opt/wireguard/temp
+    mkdir -p /opt/wireguard/temp
+    cd /opt/wireguard/temp
     printf "\n  %b Temp directory setup successfully" "${TICK}"
 
     printf "\n  %b Determining download url" "${INFO}"
@@ -159,7 +159,17 @@ setup_wgui() {
     tar -xzf wireguard-ui.tar.gz
     mv wireguard-ui wgui
     chmod +x wgui
+    cp wgui ../wgui
     printf "%b  %b Extracted Successfully" "${OVER}" "${TICK}"
+
+    printf "\n  %b Creating wgui service" "${INFO}"
+    cd /usr/local/bin/
+    echo '#!/bin/sh' >wg-alpine
+    echo 'wg-quick down wg0' >>wg-alpine
+    echo 'wg-quick up wg0' >>wg-alpine
+    echo '/opt/wireguard/wgui' >>wg-alpine
+    chmod +x wg-alpine
+    printf "%b  %b Service created successfully." "${OVER}" "${TICK}"
 }
 
 start_setup() {
