@@ -143,13 +143,28 @@ download_wireguard_ui() {
     rm -rf /opt/wireguard/temp
     mkdir -p /opt/wireguard/temp
     cd /opt/wireguard/temp
-    printf "\n  %b Temp directory setup successfully" "${TICK}"
+    printf "%b  %b Temp directory setup successfully" "${OVER}" "${TICK}"
 
     printf "\n  %b Determining download url" "${INFO}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/109655349/assets | jq -r 'map(select(.browser_download_url | test("linux-'"${OS_ARCH}"'.tar.gz$")) .browser_download_url) | .[0]')
     printf "%b  %b Downloading from url - \"%b\"\n" "${OVER}" "${INFO}" "${DOWNLOAD_URL}"
     wget -p -q ${DOWNLOAD_URL} -O wireguard-ui.tar.gz
     printf "%b%b  %b Download complete\n" "${OVER}" "${OVER}" "${TICK}"
+}
+
+set_environment_variables() {
+    printf "%b Setting environment variables" "${INFO}"
+    read -p '  Admin Username: ' a_user
+    read -sp '  Admin Password: ' a_pass
+    if (a_user==''); then
+        a_user='admin'
+    fi
+    if (a_pass==''); then
+        a_pass='admin'
+    fi
+    export WGUI_USERNAME=${a_user}
+    export WGUI_PASSWORD=${a_pass}
+    printf "\n  %b Added successfully" "${TICK}"
 }
 
 setup_wgui() {
@@ -181,17 +196,23 @@ setup_wgui() {
     printf "%b  %b Service created successfully." "${OVER}" "${TICK}"
 }
 
-start_setup() {
-    show_ascii_logo
-    os_check
-    package_manager_detect
+install_dependencies() {
     printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
     printf "\n\n%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
     install_dependent_packages "${INSTALLER_DEPS[@]}"
     printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
     install_dependent_packages "${WG_DEPS[@]}"
+}
+
+start_setup() {
+    show_ascii_logo
+    os_check
+    package_manager_detect
+    install_dependencies
     download_wireguard_ui
+    set_environment_variables
     setup_wgui
+    start_services
     printf "\n\n"
 }
 
