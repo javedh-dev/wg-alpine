@@ -140,6 +140,7 @@ download_wireguard_ui() {
     printf "%b  %b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
 
     printf "\n  %b Setting up temp directory" "${INFO}"
+    rm -rf /usr/share/wireguard/temp
     mkdir -p /usr/share/wireguard/temp
     cd /usr/share/wireguard/temp
     printf "\n  %b Temp directory setup successfully" "${TICK}"
