@@ -138,9 +138,10 @@ download_wireguard_ui(){
     OS_ARCH=$(get_architecture)
     printf "%b  %b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
 
-    printf "\n  %b Downloading binary" "${INFO}"
+    printf "\n  %b Determining download url" "${INFO}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/109655349/assets | jq 'map(select(.browser_download_url | test("linux-'"${OS_ARCH}"'.tar.gz$")) .browser_download_url) | .[0]')
     printf "%b  %b Downloading from url - %b" "${OVER}" "${INFO}" "${DOWNLOAD_URL}"
+    wget ${DOWNLOAD_URL}
 }
 
 
