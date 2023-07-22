@@ -153,7 +153,7 @@ download_wireguard_ui() {
 }
 
 set_environment_variables() {
-    printf "%b Setting environment variables" "${INFO}"
+    printf "%b Setting environment variables\n" "${INFO}"
     read -p '  Admin Username: ' a_user
     read -sp '  Admin Password: ' a_pass
     if (a_user==''); then
@@ -212,7 +212,7 @@ start_setup() {
     download_wireguard_ui
     set_environment_variables
     setup_wgui
-    start_services
+    # start_services
     printf "\n\n"
 }
 
