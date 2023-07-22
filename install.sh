@@ -193,7 +193,7 @@ show_completion() {
     show_ascii_logo
     printf "%b Setup completed succesfully\n" "${TICK}"
     MY_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
-    printf "  You can access wireguard UI at - https://%b:5000\n" "${MY_IP}"
+    printf "  You can access wireguard UI at - http://%b:5000\n" "${MY_IP}"
     printf "  Username : admin\n"
     printf "  Password : admin\n"
 }
