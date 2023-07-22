@@ -162,12 +162,21 @@ setup_wgui() {
     cp wgui ../wgui
     printf "%b  %b Extracted Successfully" "${OVER}" "${TICK}"
 
-    printf "\n  %b Creating wgui service" "${INFO}"
+    printf "\n  %b Creating wg-alpine executable" "${INFO}"
     cd /usr/local/bin/
     echo '#!/bin/sh' >wg-alpine
     echo 'wg-quick down wg0' >>wg-alpine
     echo 'wg-quick up wg0' >>wg-alpine
     echo '/opt/wireguard/wgui' >>wg-alpine
+    chmod +x wg-alpine
+    printf "%b  %b Executable created successfully." "${OVER}" "${TICK}"
+
+    printf "\n  %b Creating wg-alpine service" "${INFO}"
+    cd /etc/init.d/
+    echo '#!/sbin/openrc-run' >wg-alpine
+    echo 'command=/usr/local/bin/wg-alpine' >>wg-alpine
+    echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine
+    echo 'command_background=yes' >>wg-alpine
     chmod +x wg-alpine
     printf "%b  %b Service created successfully." "${OVER}" "${TICK}"
 }
