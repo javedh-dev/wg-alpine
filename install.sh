@@ -44,20 +44,22 @@ os_check() {
 }
 
 package_manager_detect() {
-if is_command apk ; then
-    PKG_MANAGER="apk"
-    UPDATE_PKG_CACHE="${PKG_MANAGER} update"
-    PKG_INSTALL=("${PKG_MANAGER}" add)
-    PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
-    INSTALLER_DEPS=(git openrc grep tar)
-    WG_DEPS=(wget)
-# If apk package managers was not found
-else
-    # we cannot install required packages
-    printf "  %b No supported package manager found\\n" "${CROSS}"
-    # so exit the installer
-    exit
-fi
+    printf "\n\n%b Detecting Package Manager." "${INFO}"
+    if is_command apk ; then
+        printf "\n%b APK package manage in detected." "${TICK}"
+        PKG_MANAGER="apk"
+        UPDATE_PKG_CACHE="${PKG_MANAGER} update"
+        PKG_INSTALL=("${PKG_MANAGER}" add)
+        PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
+        INSTALLER_DEPS=(git openrc grep tar)
+        WG_DEPS=(wget)
+    # If apk package managers was not found
+    else
+        # we cannot install required packages
+        printf "  %b No supported package manager found\\n" "${CROSS}"
+        # so exit the installer
+        exit
+    fi
 }
 
 
@@ -65,8 +67,7 @@ start_setup() {
     show_ascii_logo
     os_check
     package_manager_detect
-    printf "\n\n%b Setup will install Wireguard VPN with wireguard UI on alpine linux" "${INFO}"
-    printf "\n%b Initializing Wireguard on alpine" "${TICK}"
+    printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
     update_alpine
 
     printf "\n\n"
