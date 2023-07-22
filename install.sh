@@ -170,6 +170,7 @@ start_setup() {
     printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
     install_dependent_packages "${WG_DEPS[@]}"
     download_wireguard_ui
+    setup_wgui
     printf "\n\n"
 }
 
