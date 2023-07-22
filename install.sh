@@ -132,11 +132,15 @@ download_wireguard_ui(){
     printf "\n  %b Determining Latest release version" "${INFO}"
     LATEST_RELEASE=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases | jq 'max_by(.id) .id')
     LATEST_VERSION=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases | jq 'max_by(.id) .tag_name')
-    printf "  %b%b Latest version is %b" "${OVER}" "${TICK}" "${LATEST_VERSION}"
+    printf "%b  %b Latest version is %b" "${OVER}" "${TICK}" "${LATEST_VERSION}"
 
     printf "\n  %b Determining os architecture to download..." "${INFO}"
     OS_ARCH=$(get_architecture)
-    printf "  %b%b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
+    printf "%b  %b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
+
+    printf "\n  %b Downloading binary" "${INFO}"
+    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/109655349/assets | jq 'map(select(.browser_download_url | test("linux-'"${OS_ARCH}"'.tar.gz$")) .browser_download_url) | .[0]')
+    printf "%b  %b Downloading from url - %b" "${OVER}" "${INFO}" "${DOWNLOAD_URL}"
 }
 
 
