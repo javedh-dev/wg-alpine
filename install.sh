@@ -189,6 +189,15 @@ install_dependencies() {
     install_dependent_packages "${WG_DEPS[@]}"
 }
 
+show_completion() {
+    show_ascii_logo
+    printf "%b Setup completed succesfully\n" "${TICK}"
+    MY_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
+    printf "  You can access wireguard UI at - https://%b:5000\n" "${MY_IP}"
+    printf "  Username : admin\n"
+    printf "  Password : admin\n"
+}
+
 start_setup() {
     show_ascii_logo
     os_check
@@ -198,6 +207,7 @@ start_setup() {
     setup_wgui
     enable_service "wg-alpine"
     restart_service "wg-alpine"
+    show_completion
     printf "\n\n"
 }
 
