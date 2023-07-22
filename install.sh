@@ -135,7 +135,7 @@ download_wireguard_ui(){
     printf "  %b%b Latest version is %b" "${OVER}" "${TICK}" "${LATEST_VERSION}"
 
     printf "\n  %b Determining os architecture to download..." "${INFO}"
-    OS_ARCH=get_architecture()
+    OS_ARCH=get_architecture
     printf "  %b%b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
 }
 
