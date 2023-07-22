@@ -122,6 +122,7 @@ get_architecture(){
         printf "\n%b Currently only x86_64 architecture is supported" "${CROSS}"
         exit 1
     fi
+    return ""
 }
 
 download_wireguard_ui(){
