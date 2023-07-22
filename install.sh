@@ -115,7 +115,7 @@ install_dependent_packages() {
 }
 
 get_architecture(){
-    ARCH=${uname -m}
+    ARCH=$(uname -m)
     if (ARCH=='x86_64'); then
         return "amd64";
     else
