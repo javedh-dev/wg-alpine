@@ -18,7 +18,7 @@ show_ascii_logo() {
 "
 }
 
-update_alpine(){
+update_alpine() {
     printf "\n\n%b Updating alpine linux" "${INFO}"
     #sudo apt-get update && sudo apt-get upgrade -y
 }
@@ -46,7 +46,7 @@ os_check() {
 
 package_manager_detect() {
     printf "\n\n%b Detecting Package Manager." "${INFO}"
-    if is_command apk ; then
+    if is_command apk; then
         printf "%b%b APK package manager in detected." "${OVER}" "${TICK}"
         PKG_MANAGER="apk"
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
@@ -68,7 +68,7 @@ restart_service() {
     # Local, named variables
     local str="Restarting ${1} service"
     printf "  %b %s..." "${INFO}" "${str}"
-    service "${1}" restart &> /dev/null
+    service "${1}" restart &>/dev/null
     printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
 }
 
@@ -77,7 +77,7 @@ enable_service() {
     # Local, named variables
     local str="Enabling ${1} service to start on reboot"
     printf "  %b %s..." "${INFO}" "${str}"
-    rc-update add "${1}" &> /dev/null
+    rc-update add "${1}" &>/dev/null
     printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
 }
 
@@ -88,7 +88,7 @@ install_dependent_packages() {
 
     for i in "$@"; do
         printf "  %b Checking for %s..." "${INFO}" "${i}"
-        if "${PKG_MANAGER}" info | grep -Eq "^${i}\$" &> /dev/null; then
+        if "${PKG_MANAGER}" info | grep -Eq "^${i}\$" &>/dev/null; then
             printf "%b  %b Checking for %s\\n" "${OVER}" "${TICK}" "${i}"
         else
             printf "%b  %b Checking for %s (will be installed)\\n" "${OVER}" "${INFO}" "${i}"
@@ -98,9 +98,9 @@ install_dependent_packages() {
     # If there's anything to install, install everything in the list.
     if [[ "${#installArray[@]}" -gt 0 ]]; then
         printf "  %b Processing %s install(s) for: %s, please wait...\\n" "${INFO}" "${PKG_MANAGER}" "${installArray[*]}"
-        printf '%*s\n' "${c}" '' | tr " " -;
+        printf '%*s\n' "${c}" '' | tr " " -
         "${PKG_INSTALL[@]}" "${installArray[@]}"
-        printf '%*s\n' "${c}" '' | tr " " -;
+        printf '%*s\n' "${c}" '' | tr " " -
 
         # Initialize openrc if we installed it
         if [[ "${installArray[*]}" =~ "openrc" ]] && [[ ! -d /run/openrc ]]; then
@@ -114,17 +114,18 @@ install_dependent_packages() {
     return 0
 }
 
-get_architecture(){
+get_architecture() {
     ARCH=$(uname -m)
     if (ARCH=='x86_64'); then
-        echo "amd64";
+        echo "amd64"
     else
         printf "\n%b Currently only x86_64 architecture is supported" "${CROSS}"
         exit 1
     fi
 }
 
-download_wireguard_ui(){
+download_wireguard_ui() {
+
     WGUI_URL="https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/"
     printf "\n%b Downloading Wireguard UI..." "${INFO}"
     #  curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/109655349/assets | jq 'map(select(.browser_download_url | test("linux-amd64.tar.gz$")) .browser_download_url) | .[0]'
@@ -138,13 +139,17 @@ download_wireguard_ui(){
     OS_ARCH=$(get_architecture)
     printf "%b  %b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
 
+    printf "\n  %b Setting up temp directory" "${INFO}"
+    mkdir -p /usr/share/wireguard/temp
+    cd /usr/share/wireguard/temp
+    printf "\n  %b Temp directory setu successfully" "${TICK}"
+
     printf "\n  %b Determining download url" "${INFO}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/109655349/assets | jq -r 'map(select(.browser_download_url | test("linux-'"${OS_ARCH}"'.tar.gz$")) .browser_download_url) | .[0]')
     printf "%b  %b Downloading from url - \"%b\"\n" "${OVER}" "${INFO}" "${DOWNLOAD_URL}"
     wget -q ${DOWNLOAD_URL} -o wireguard-ui.tar.gz
     printf "%b%b  %b Download complete\n" "${OVER}" "${OVER}" "${TICK}"
 }
-
 
 start_setup() {
     show_ascii_logo
