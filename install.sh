@@ -52,7 +52,7 @@ package_manager_detect() {
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
         PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
-        INSTALLER_DEPS=(curl git openrc grep tar)
+        INSTALLER_DEPS=(curl git jq openrc grep tar)
         WG_DEPS=(wget wireguard-tools)
     # If apk package managers was not found
     else
