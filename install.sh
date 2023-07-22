@@ -5,6 +5,7 @@ COL_LIGHT_RED='\e[1;31m'
 TICK="[${COL_LIGHT_GREEN}✓${COL_NC}]"
 CROSS="[${COL_LIGHT_RED}✗${COL_NC}]"
 INFO="[i]"
+OVER="\\r\\033[K"
 
 show_ascii_logo() {
     echo -e "
