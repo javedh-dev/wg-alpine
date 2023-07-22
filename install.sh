@@ -114,6 +114,16 @@ install_dependent_packages() {
     return 0
 }
 
+get_architecture(){
+    ARCH=${uname -m}
+    if (ARCH=='x86_64'); then
+        return "amd64";
+    else
+        printf "\n%b Currently only x86_64 architecture is supported" "${CROSS}"
+        exit 1
+    fi
+}
+
 download_wireguard_ui(){
     WGUI_URL="https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases/"
     printf "\n%b Downloading Wireguard UI..." "${INFO}"
@@ -121,7 +131,12 @@ download_wireguard_ui(){
 
     printf "\n  %b Determining Latest release version" "${INFO}"
     LATEST_RELEASE=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases | jq 'max_by(.id) .id')
-    printf "%b%b Latest version is %b" "${OVER}" "${INFO}" "${LATEST_RELEASE}"
+    LATEST_VERSION=$(curl -s https://api.github.com/repos/ngoduykhanh/wireguard-ui/releases | jq 'max_by(.id) .tag_name')
+    printf "  %b%b Latest version is %b" "${OVER}" "${TICK}" "${LATEST_VERSION}"
+
+    printf "\n  %b Determining os architecture to download..." "${INFO}"
+    OS_ARCH=get_architecture()
+    printf "  %b%b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
 }
 
 
