@@ -36,18 +36,18 @@ os_check() {
     detected_os=$(grep "\bID\b" /etc/os-release | cut -d '=' -f2 | tr -d '"')
     detected_version=$(grep VERSION_ID /etc/os-release | cut -d '=' -f2 | tr -d '"')
     if ! grep -iq "alpine" <(echo "$detected_os"); then
-        printf "%b This installer only supports Alpine Linux." "${INFO}"
+        printf "%b%b This installer only supports Alpine Linux." "${OVER}" "${INFO}"
         printf "\n%b ${detected_os} is not yet supported\n\n" "${CROSS}"
         exit 1
     else
-        printf "\n%b OS : %b-%b " "${TICK}" "${detected_os}" "${detected_version}"
+        printf "%b%b OS : %b-%b " "${OVER}" "${TICK}" "${detected_os}" "${detected_version}"
     fi
 }
 
 package_manager_detect() {
     printf "\n\n%b Detecting Package Manager." "${INFO}"
     if is_command apk ; then
-        printf "\n%b APK package manage in detected." "${TICK}"
+        printf "%b%b APK package manage in detected." "${OVER}" "${TICK}"
         PKG_MANAGER="apk"
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
@@ -57,7 +57,7 @@ package_manager_detect() {
     # If apk package managers was not found
     else
         # we cannot install required packages
-        printf "  %b No supported package manager found\\n" "${CROSS}"
+        printf "%b%b No supported package manager found\\n" "${OVER}" "${CROSS}"
         # so exit the installer
         exit
     fi
