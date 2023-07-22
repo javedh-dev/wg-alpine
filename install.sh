@@ -53,7 +53,7 @@ package_manager_detect() {
         PKG_INSTALL=("${PKG_MANAGER}" add)
         PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
         INSTALLER_DEPS=(git openrc grep tar)
-        WG_DEPS=(wget)
+        WG_DEPS=(wget wireguard-tools)
     # If apk package managers was not found
     else
         # we cannot install required packages
