@@ -62,14 +62,89 @@ package_manager_detect() {
     fi
 }
 
+stop_service() {
+    # Stop service passed in as argument.
+    # Can softfail, as process may not be installed when this is called
+    local str="Stopping ${1} service"
+    printf "  %b %s..." "${INFO}" "${str}"
+    service "${1}" stop &> /dev/null || true
+    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
+}
+
+# Start/Restart service passed in as argument
+restart_service() {
+    # Local, named variables
+    local str="Restarting ${1} service"
+    printf "  %b %s..." "${INFO}" "${str}"
+    service "${1}" restart &> /dev/null
+    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
+}
+
+# Enable service so that it will start with next reboot
+enable_service() {
+    # Local, named variables
+    local str="Enabling ${1} service to start on reboot"
+    printf "  %b %s..." "${INFO}" "${str}"
+    rc-update add "${1}" &> /dev/null
+    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
+}
+
+# Disable service so that it will not with next reboot
+disable_service() {
+    # Local, named variables
+    local str="Disabling ${1} service"
+    printf "  %b %s..." "${INFO}" "${str}"
+    rc-update del "${1}" &> /dev/null
+    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
+}
+
+check_service_active() {
+    rc-update show "${1}" &> /dev/null
+}
+
+
+install_dependent_packages() {
+    # Install packages passed in via argument array
+    # No spinner - conflicts with set -e
+    declare -a installArray
+
+    for i in "$@"; do
+        printf "  %b Checking for %s..." "${INFO}" "${i}"
+        if "${PKG_MANAGER}" info | grep -Eq "^${i}\$" &> /dev/null; then
+            printf "%b  %b Checking for %s\\n" "${OVER}" "${TICK}" "${i}"
+        else
+            printf "%b  %b Checking for %s (will be installed)\\n" "${OVER}" "${INFO}" "${i}"
+            installArray+=("${i}")
+        fi
+    done
+    # If there's anything to install, install everything in the list.
+    if [[ "${#installArray[@]}" -gt 0 ]]; then
+        printf "  %b Processing %s install(s) for: %s, please wait...\\n" "${INFO}" "${PKG_MANAGER}" "${installArray[*]}"
+        printf '%*s\n' "${c}" '' | tr " " -;
+        "${PKG_INSTALL[@]}" "${installArray[@]}"
+        printf '%*s\n' "${c}" '' | tr " " -;
+
+        # Initialize openrc if we installed it
+        if [[ "${installArray[*]}" =~ "openrc" ]] && [[ ! -d /run/openrc ]]; then
+            mkdir /run/openrc
+            touch /run/openrc/softlevel
+            openrc
+        fi
+        return
+    fi
+    printf "\\n"
+    return 0
+}
+
+
 
 start_setup() {
     show_ascii_logo
     os_check
     package_manager_detect
     printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
-    update_alpine
-
+    printf "%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
+    install_dependent_packages "${INSTALLER_DEPS[@]}"
     printf "\n\n"
 }
 
