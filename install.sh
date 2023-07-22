@@ -52,8 +52,9 @@ package_manager_detect() {
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
         PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
-        INSTALLER_DEPS=(curl git jq openrc grep tar)
-        WG_DEPS=(wget wireguard-tools)
+        BUILD_DEPS=(build-base elfutils-dev gcc git linux-headers)
+        INSTALLER_DEPS=(curl jq openrc grep tar)
+        WG_DEPS=(bc coredns gnupg grep iproute2 iptables ip6tables iputils libcap-utils libqrencode net-tools openresolv perl)
     # If apk package managers was not found
     else
         # we cannot install required packages
@@ -183,10 +184,28 @@ setup_wgui() {
 
 install_dependencies() {
     printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
+    printf "\n\n%b Checking for / Installing Required dependencies for Building...\\n" "${INFO}"
+    install_dependent_packages "${BUILD_DEPS[@]}"
     printf "\n\n%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
     install_dependent_packages "${INSTALLER_DEPS[@]}"
     printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
     install_dependent_packages "${WG_DEPS[@]}"
+}
+
+build_wireguard_tools() {
+    echo "wireguard" >>/etc/modules
+    echo "**** install wireguard-tools ****"
+    if [ -z ${WIREGUARD_RELEASE+x} ]; then
+        WIREGUARD_RELEASE=$(curl -sX GET "https://api.github.com/repos/WireGuard/wireguard-tools/tags" | jq -r .[0].name)
+    fi
+    mkdir /app
+    cd /app
+    git clone https://git.zx2c4.com/wireguard-tools
+    cd wireguard-tools
+    git checkout "${WIREGUARD_RELEASE}"
+    sed -i 's|\[\[ $proto == -4 \]\] && cmd sysctl -q net\.ipv4\.conf\.all\.src_valid_mark=1|[[ $proto == -4 ]] \&\& [[ $(sysctl -n net.ipv4.conf.all.src_valid_mark) != 1 ]] \&\& cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1|' src/wg-quick/linux.bash
+    make -C src -j$(nproc)
+    make -C src install
 }
 
 show_completion() {
@@ -205,6 +224,7 @@ start_setup() {
     os_check
     package_manager_detect
     install_dependencies
+    build_wireguard_tools
     download_wireguard_ui
     setup_wgui
     enable_service "wg-alpine"
