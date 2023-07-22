@@ -152,21 +152,6 @@ download_wireguard_ui() {
     printf "%b%b  %b Download complete\n" "${OVER}" "${OVER}" "${TICK}"
 }
 
-set_environment_variables() {
-    printf "%b Setting environment variables\n" "${INFO}"
-    read -p '  Admin Username: ' a_user
-    read -sp '  Admin Password: ' a_pass
-    if (a_user==''); then
-        a_user='admin'
-    fi
-    if (a_pass==''); then
-        a_pass='admin'
-    fi
-    export WGUI_USERNAME=${a_user}
-    export WGUI_PASSWORD=${a_pass}
-    printf "\n  %b Added successfully" "${TICK}"
-}
-
 setup_wgui() {
     printf "\n%b Setting Up WGUI" "${INFO}"
 
@@ -210,9 +195,9 @@ start_setup() {
     package_manager_detect
     install_dependencies
     download_wireguard_ui
-    set_environment_variables
     setup_wgui
-    # start_services
+    enable_service "wg-alpine"
+    restart_service "wg-alpine"
     printf "\n\n"
 }
 
