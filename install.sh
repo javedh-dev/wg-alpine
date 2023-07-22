@@ -117,12 +117,11 @@ install_dependent_packages() {
 get_architecture(){
     ARCH=$(uname -m)
     if (ARCH=='x86_64'); then
-        return "amd64";
+        echo "amd64";
     else
         printf "\n%b Currently only x86_64 architecture is supported" "${CROSS}"
         exit 1
     fi
-    return ""
 }
 
 download_wireguard_ui(){
