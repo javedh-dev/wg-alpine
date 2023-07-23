@@ -184,21 +184,25 @@ description="A wireguard service which will be autorestart on config changes"
 
 pidfile="/run/${RC_SVCNAME}.pid"
 command="/opt/wireguard/wgui"
-command_args=""
 command_background=yes
 
 start_pre() {
-    if (ls /sys/class/net | grep wg0 >/dev/null); then
+    if (ls /sys/class/net | grep wg0 &>/dev/null); then
         echo "wg0 interface is already up. Restarting !!!"
         wg-quick down wg0
     fi
-    wg-quick up wg0
+    
+    if (ls /etc/wireguard/wg0.conf &>/dev/null); then
+        wg-quick up wg0
+    fi
+    
 }
 
 stop_post() {
     if ! (ls /sys/class/net | grep wg0 >/dev/null); then
         echo "wg0 interface is already down. Skipping !!!"
-    else
+    fi
+    if (ls /etc/wireguard/wg0.conf &>/dev/null); then
         wg-quick down wg0
     fi
 }
@@ -206,7 +210,7 @@ BLOCK
 }
 
 create_wgui_watch_service(){
-    cat > /etc/init.d/wgui_watch <<BLOCK
+    cat > /etc/init.d/wgui-watch <<BLOCK
 #!/sbin/openrc-run
 description="A wireguard UI watcher service"
 
@@ -247,22 +251,28 @@ setup_wgui() {
     create_wgui_service
     create_wgui_watch_service
     chmod +x /etc/init.d/wgui
-    chmod +x /etc/init.d/wgui_watch
+    chmod +x /etc/init.d/wgui-watch
     printf "%b  %b Created wgui and watch services" "${OVER}" "${TICK}"
 
     printf "\n  %b Enabling services to start at boot" "${INFO}" 
     enable_service "wgui"
     enable_service "wgui-watch"
     printf "%b  %b Enabled services to start at boot" "${OVER}" "${TICK}"
+
+    printf "\n  %b Creating empty config file" "${INFO}" 
+    touch /etc/wireguard/wg0.conf
+    printf "%b  %b Created empty config file" "${OVER}" "${TICK}"
 }
 
 show_completion() {
     show_ascii_logo
     printf "%b Setup completed succesfully\n" "${TICK}"
     
-    printf "\n\n%b System Reboot is required. Press any key to reboot....\n\n\n" "${INFO}"
+    printf "\n\n%b System Reboot is required. Press 'y' reboot....\n\n\n" "${INFO}"
     read -n1 ans
-    reboot
+    if [ ${ans} = 'y' ]; then
+        reboot
+    fi
 }
 
 
