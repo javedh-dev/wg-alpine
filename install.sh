@@ -165,7 +165,7 @@ setup_wgui() {
     printf "\n  %b Creating wg-alpine executable" "${INFO}"
     cd /usr/local/bin/
     echo '#!/bin/sh' >wg-alpine
-    echo 'cat wg-alpine.pid > kill' >>wg-alpine
+    echo 'cat /run/wg-alpine.pid > kill' >>wg-alpine
     echo 'wg-quick down wg0' >>wg-alpine
     echo 'wg-quick up wg0' >>wg-alpine
     echo '/opt/wireguard/wgui' >>wg-alpine
@@ -183,22 +183,22 @@ setup_wgui() {
     chmod +x wg-alpine
     printf "%b  %b Service created successfully." "${OVER}" "${TICK}"
 
-    printf "\n  %b Enabling wg-alpine service to start at boot" "${INFO}"
-    rc-update add wg-alpine
-    rc-update add wg-alpine-watcher
-    printf "%b  %b Enabled wg-alpine service to start at boot" "${OVER}" "${TICK}"
-
     printf "\n  %b Creating wg-alpine-watcher service" "${INFO}"
     cd /etc/init.d/
     echo '#!/sbin/openrc-run' >wg-alpine-watcher
-    echo 'command=/sbin/inotifyd' >>wg-alpine
+    echo 'command=/sbin/inotifyd' >>wg-alpine-watcher
     echo 'command_args="/usr/local/bin/wg-alpine /etc/wireguard/wg0.conf:w"' >>wg-alpine-watcher
     echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine-watcher
     echo 'command_background=yes' >>wg-alpine-watcher
-    echo 'output_log="/var/log/wg-alpine.log"' >>wg-alpine-watcher
-    echo 'error_log="/var/log/wg-alpine.err"' >>wg-alpine-watcher
+    echo 'output_log="/var/log/wg-alpine-watcher.log"' >>wg-alpine-watcher
+    echo 'error_log="/var/log/wg-alpine-watcher.err"' >>wg-alpine-watcher
     chmod +x wg-alpine-watcher
     printf "%b  %b wg-alpine-watcher Service created successfully." "${OVER}" "${TICK}"
+
+    printf "\n  %b Enabling services to start at boot" "${INFO}"
+    rc-update add wg-alpine
+    rc-update add wg-alpine-watcher
+    printf "%b  %b Enabled services to start at boot" "${OVER}" "${TICK}"
 }
 
 install_dependencies() {
