@@ -47,7 +47,7 @@ os_check() {
 package_manager_detect() {
     printf "\n\n%b Detecting Package Manager." "${INFO}"
     if is_command apk; then
-        printf "%b%b APK package manager in detected." "${OVER}" "${TICK}"
+        printf "%b%b APK package manager is detected." "${OVER}" "${TICK}"
         PKG_MANAGER="apk"
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
@@ -165,6 +165,7 @@ setup_wgui() {
     printf "\n  %b Creating wg-alpine executable" "${INFO}"
     cd /usr/local/bin/
     echo '#!/bin/sh' >wg-alpine
+    echo 'cat wg-alpine.pid > kill' >>wg-alpine
     echo 'wg-quick down wg0' >>wg-alpine
     echo 'wg-quick up wg0' >>wg-alpine
     echo '/opt/wireguard/wgui' >>wg-alpine
@@ -174,12 +175,30 @@ setup_wgui() {
     printf "\n  %b Creating wg-alpine service" "${INFO}"
     cd /etc/init.d/
     echo '#!/sbin/openrc-run' >wg-alpine
-    echo 'command=/sbin/inotifyd' >>wg-alpine
-    echo 'command_args="/usr/local/bin/wg-alpine /etc/wireguard/wg0.conf:w"' >>wg-alpine
+    echo 'command="/usr/local/bin/wg-alpine"' >>wg-alpine
     echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine
     echo 'command_background=yes' >>wg-alpine
+    echo 'output_log="/var/log/wg-alpine.log"' >>wg-alpine
+    echo 'error_log="/var/log/wg-alpine.err"' >>wg-alpine
     chmod +x wg-alpine
     printf "%b  %b Service created successfully." "${OVER}" "${TICK}"
+
+    printf "\n  %b Enabling wg-alpine service to start at boot" "${INFO}"
+    rc-update add wg-alpine
+    rc-update add wg-alpine-watcher
+    printf "%b  %b Enabled wg-alpine service to start at boot" "${OVER}" "${TICK}"
+
+    printf "\n  %b Creating wg-alpine-watcher service" "${INFO}"
+    cd /etc/init.d/
+    echo '#!/sbin/openrc-run' >wg-alpine-watcher
+    echo 'command=/sbin/inotifyd' >>wg-alpine
+    echo 'command_args="/usr/local/bin/wg-alpine /etc/wireguard/wg0.conf:w"' >>wg-alpine-watcher
+    echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine-watcher
+    echo 'command_background=yes' >>wg-alpine-watcher
+    echo 'output_log="/var/log/wg-alpine.log"' >>wg-alpine-watcher
+    echo 'error_log="/var/log/wg-alpine.err"' >>wg-alpine-watcher
+    chmod +x wg-alpine-watcher
+    printf "%b  %b wg-alpine-watcher Service created successfully." "${OVER}" "${TICK}"
 }
 
 install_dependencies() {
@@ -195,8 +214,8 @@ show_completion() {
     printf "%b Setup completed succesfully\n" "${TICK}"
     MY_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
     printf "  You can access wireguard UI at - http://%b:5000\n" "${MY_IP}"
-    printf "  Username : admin\n"
-    printf "  Password : admin\n"
+    printf "  Username : wg-alpine\n"
+    printf "  Password : wg-alpine\n"
     printf "\n\n"
 }
 
