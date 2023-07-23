@@ -42,7 +42,7 @@ is_command() {
 package_manager_detect() {
     printf "\n\n%b Detecting Package Manager." "${INFO}"
     if is_command apk; then
-        printf "%b%b APK package manager is detected." "${OVER}" "${TICK}"
+        printf "%b%b APK package manager is detected.\\n" "${OVER}" "${TICK}"
         PKG_MANAGER="apk"
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
@@ -59,7 +59,7 @@ package_manager_detect() {
 }
 
 update_alpine() {
-    printf "\n\n%b Updating alpine linux" "${INFO}"
+    printf "%b Updating alpine linux" "${INFO}"
     apk update &>/dev/null
     apk upgrade &>/dev/null
     printf "%b%b Updated alpine linux" "${OVER}" "${TICK}"
