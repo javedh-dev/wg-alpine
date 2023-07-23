@@ -181,7 +181,7 @@ setup_wgui() {
 }
 
 create_wgui_watch_service(){
-    cat > /ets/init.d/wgui_watch <<BLOCK
+    cat > /etc/init.d/wgui_watch <<BLOCK
 #!/sbin/openrc-run
 description="A wireguard UI watcher service"
 
@@ -195,7 +195,7 @@ BLOCK
 }
 
 create_wgui_service(){
-    cat > /ets/init.d/wgui <<BLOCK
+    cat > /etc/init.d/wgui <<BLOCK
 #!/sbin/openrc-run
 description="A wireguard service which will be autorestart on config changes"
 
