@@ -112,12 +112,12 @@ setup_wireguard() {
     rc-update add iptables default &>/dev/null
     printf "%b  %b Added iptable to start at boot\n" "${OVER}" "${TICK}"
 
-    printf "  %b Adding environment variables to start wireguard\n" "${INFO}"
-    export WGUI_USERNAME="wg-alpine" &>/dev/null
-    export WGUI_PASSWORD="wg-alpine" &>/dev/null
-    export WGUI_SERVER_POST_UP_SCRIPT="iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;iptables -A FORWARD -o wg0 -j ACCEPT" &>/dev/null
-    export WGUI_SERVER_POST_DOWN_SCRIPT="iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;iptables -D FORWARD -o wg0 -j ACCEPT" &>/dev/null
-    printf "%b  %b Added environment variables to start wireguard\n" "${OVER}" "${TICK}"
+    # printf "  %b Adding environment variables to start wireguard\n" "${INFO}"
+    # export WGUI_USERNAME="wg-alpine" &>/dev/null
+    # export WGUI_PASSWORD="wg-alpine" &>/dev/null
+    # export WGUI_SERVER_POST_UP_SCRIPT="iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;iptables -A FORWARD -o wg0 -j ACCEPT" &>/dev/null
+    # export WGUI_SERVER_POST_DOWN_SCRIPT="iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;iptables -D FORWARD -o wg0 -j ACCEPT" &>/dev/null
+    # printf "%b  %b Added environment variables to start wireguard\n" "${OVER}" "${TICK}"
 
     printf "  %b Adding sysctl confugrations\n" "${INFO}"
     echo "net.ipv4.ip_forward = 1" >>/etc/sysctl.conf
@@ -186,11 +186,19 @@ description="A wireguard service which will be autorestart on config changes"
 
 pidfile="/run/\${RC_SVCNAME}.pid"
 command="/opt/wireguard/wgui"
+command_args="
+
+"
 command_background=yes
 output_log="/var/log/wgui.log"
 error_log="/var/log/wgui.log"
 
 start_pre() {
+    export WGUI_USERNAME="wg-alpine" &>/dev/null
+    export WGUI_PASSWORD="wg-alpine" &>/dev/null
+    export WGUI_SERVER_POST_UP_SCRIPT="iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;iptables -A FORWARD -o wg0 -j ACCEPT" &>/dev/null
+    export WGUI_SERVER_POST_DOWN_SCRIPT="iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;iptables -D FORWARD -o wg0 -j ACCEPT" &>/dev/null
+    
     if (ls /sys/class/net | grep wg0 &>/dev/null); then
         echo "wg0 interface is already up. Restarting !!!"
         wg-quick down wg0
@@ -236,6 +244,13 @@ enable_service() {
     printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
 }
 
+# Enable service so that it will start with next reboot
+start_service() {
+    printf "  %b Starting ${1} service to start on reboot..." "${INFO}" "${str}"
+    rc-update add "${1}" &>/dev/null
+    printf "%b  %b Started ${1} service to start on reboot...\\n" "${OVER}" "${TICK}" "${str}"
+}
+
 setup_wgui() {
     printf "\n%b Setting Up WGUI" "${INFO}"
 
@@ -266,16 +281,21 @@ setup_wgui() {
     printf "\n  %b Creating empty config file" "${INFO}" 
     touch /etc/wireguard/wg0.conf
     printf "%b  %b Created empty config file" "${OVER}" "${TICK}"
+
+    printf "\n  %b Starting services" "${INFO}" 
+    start_service "wgui"
+    start_service "wgui-watch"
+    printf "%b  %b Started services " "${OVER}" "${TICK}"
 }
 
 show_completion() {
     show_ascii_logo
     printf "%b Setup completed succesfully\n" "${TICK}"
     
-    printf "\n\n%b System Reboot is required. Please rebbot to complete setup... \n\n\n" "${INFO}"
-
-    read -p "Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
-    reboot
+    MY_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
+    printf "\t\tYou can access wireguard UI at - https://%b:5000\n" "${MY_IP}"
+    printf "\t\tUsername : wg-alpine\n"
+    printf "\t\tPassword : wg-alpine\n"
 }
 
 
