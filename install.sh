@@ -185,6 +185,8 @@ description="A wireguard service which will be autorestart on config changes"
 pidfile="/run/\${RC_SVCNAME}.pid"
 command="/opt/wireguard/wgui"
 command_background=yes
+output_log="/var/log/wgui.log"
+error_log="/var/log/wgui.log"
 
 start_pre() {
     if (ls /sys/class/net | grep wg0 &>/dev/null); then
@@ -216,10 +218,10 @@ description="A wireguard UI watcher service"
 
 pidfile="/run/\${RC_SVCNAME}.pid"
 command="/sbin/inotifyd"
-command_args="/opt/wireguard/restart_wgui /etc/wireguard/wg0.conf:w"
+command_args="/opt/wireguard/wgui-restart /etc/wireguard/wg0.conf:w"
 command_background=yes
 output_log="/var/log/wgui-watch.log"
-error_log="/var/log/wgui-watch.err"
+error_log="/var/log/wgui-watch.log"
 BLOCK
 }
 
@@ -269,7 +271,7 @@ show_completion() {
     printf "%b Setup completed succesfully\n" "${TICK}"
     
     printf "\n\n%b System Reboot is required. Press 'y' reboot....\n\n\n" "${INFO}"
-    read -n1 ans
+    read -n1 -rp "Press any key to continue..." ans
     if [ ${ans} = 'y' ]; then
         reboot
     fi
