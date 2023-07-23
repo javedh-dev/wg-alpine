@@ -242,9 +242,9 @@ enable_service() {
 
 # Start service so that it will start with next reboot
 start_service() {
-    printf "  %b Starting ${1} service to start on reboot..." "${INFO}" "${str}"
+    printf "  %b Starting ${1} service to start on reboot..." "${INFO}"
     rc-service "${1}" start &>/dev/null
-    printf "%b  %b Started ${1} service to start on reboot...\\n" "${OVER}" "${TICK}" "${str}"
+    printf "%b  %b Started ${1} service to start on reboot...\\n" "${OVER}" "${TICK}"
 }
 
 setup_wgui() {
