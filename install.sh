@@ -211,7 +211,7 @@ stop_post() {
     if ! (ls /sys/class/net | grep wg0 >/dev/null); then
         echo "wg0 interface is already down. Skipping !!!"
     elif (ls /etc/wireguard/wg0.conf &>/dev/null); then
-        wg-quick down wg0
+        wg-quick down wg0 &
     fi
 }
 BLOCK
