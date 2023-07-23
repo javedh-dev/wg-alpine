@@ -192,6 +192,10 @@ setup_wgui() {
     echo 'command_background=yes' >>wg-alpine-watcher
     echo 'output_log="/var/log/wg-alpine-watcher.log"' >>wg-alpine-watcher
     echo 'error_log="/var/log/wg-alpine-watcher.err"' >>wg-alpine-watcher
+    echo '' >>wg-alpine-watcher
+    echo 'depend() {' >>wg-alpine-watcher
+    echo '  need wg-alpine' >>wg-alpine-watcher
+    echo '}' >>wg-alpine-watcher
     chmod +x wg-alpine-watcher
     printf "%b  %b wg-alpine-watcher Service created successfully." "${OVER}" "${TICK}"
 
@@ -237,6 +241,7 @@ setup_wireguard() {
     echo "net.ipv6.conf.all.forwarding = 1" >>/etc/sysctl.conf
     echo "net.ipv4.conf.all.proxy_arp = 1" >>/etc/sysctl.conf
     rc-update add sysctl
+    rc-service sysctl restart
     printf "%b  %b Added sysctl confugrations\n" "${OVER}" "${TICK}"
 
     printf "  %b Allowing to IPv4 forwarding\n" "${INFO}"
