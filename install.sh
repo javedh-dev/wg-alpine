@@ -272,11 +272,7 @@ show_completion() {
     show_ascii_logo
     printf "%b Setup completed succesfully\n" "${TICK}"
     
-    printf "\n\n%b System Reboot is required. \n\n\n" "${INFO}"
-
-    read -p "Reboot? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || reboot
-    echo $confirm
-    # printf "\n\n\n"
+    printf "\n\n%b System Reboot is required. Please rebbot to complete setup... \n\n\n" "${INFO}"
 }
 
 
