@@ -20,7 +20,7 @@ show_ascii_logo() {
 
 update_alpine() {
     printf "\n\n%b Updating alpine linux" "${INFO}"
-    #sudo apt-get update && sudo apt-get upgrade -y
+    apk update && apk upgrade
 }
 
 is_command() {
@@ -47,14 +47,13 @@ os_check() {
 package_manager_detect() {
     printf "\n\n%b Detecting Package Manager." "${INFO}"
     if is_command apk; then
-        printf "%b%b APK package manager in detected." "${OVER}" "${TICK}"
+        printf "%b%b APK package manager is detected." "${OVER}" "${TICK}"
         PKG_MANAGER="apk"
         UPDATE_PKG_CACHE="${PKG_MANAGER} update"
         PKG_INSTALL=("${PKG_MANAGER}" add)
         PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
-        BUILD_DEPS=(build-base elfutils-dev gcc git linux-headers)
-        INSTALLER_DEPS=(curl jq openrc grep tar)
-        WG_DEPS=(bc coredns gnupg grep iproute2 iptables ip6tables iputils libcap-utils libqrencode net-tools openresolv perl)
+        INSTALLER_DEPS=(curl git jq openrc grep tar)
+        WG_DEPS=(wget wireguard-tools iptables)
     # If apk package managers was not found
     else
         # we cannot install required packages
@@ -163,49 +162,79 @@ setup_wgui() {
     cp wgui ../wgui
     printf "%b  %b Extracted Successfully" "${OVER}" "${TICK}"
 
-    printf "\n  %b Creating wg-alpine executable" "${INFO}"
-    cd /usr/local/bin/
-    echo '#!/bin/sh' >wg-alpine
-    echo 'wg-quick down wg0' >>wg-alpine
-    echo 'wg-quick up wg0' >>wg-alpine
-    echo '/opt/wireguard/wgui' >>wg-alpine
-    chmod +x wg-alpine
-    printf "%b  %b Executable created successfully." "${OVER}" "${TICK}"
+    printf "\n  %b Creating a service restarter" "${INFO}"
+    create_wgui_restart
+    chmod +x /opt/wireguard/wgui-restart
+    printf "%b  %b Created a service restarter" "${OVER}" "${TICK}"
 
-    printf "\n  %b Creating wg-alpine service" "${INFO}"
-    cd /etc/init.d/
-    echo '#!/sbin/openrc-run' >wg-alpine
-    echo 'command=/usr/local/bin/wg-alpine' >>wg-alpine
-    echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine
-    echo 'command_background=yes' >>wg-alpine
-    chmod +x wg-alpine
-    printf "%b  %b Service created successfully." "${OVER}" "${TICK}"
+    printf "\n  %b Creating wgui and watch services" "${INFO}"
+    create_wgui_service
+    create_wgui_watch_service
+    chmod +x /etc/init.d/wgui
+    chmod +x /etc/init.d/wgui_watch
+    printf "%b  %b Created wgui and watch services" "${OVER}" "${TICK}"
+
+    printf "\n  %b Enabling services to start at boot" "${INFO}"
+    rc-update add wg-alpine
+    rc-update add wg-alpine-watcher
+    printf "%b  %b Enabled services to start at boot" "${OVER}" "${TICK}"
+}
+
+create_wgui_watch_service(){
+    cat > /ets/init.d/wgui_watch <<BLOCK
+#!/sbin/openrc-run
+description="A wireguard UI watcher service"
+
+pidfile="/run/${RC_SVCNAME}.pid"
+command="/sbin/inotifyd"
+command_args="/opt/wireguard/restart_wgui /etc/wireguard/wg0.conf:w"
+command_background=yes
+output_log="/var/log/wgui-watch.log"
+error_log="/var/log/wgui-watch.err"
+BLOCK
+}
+
+create_wgui_service(){
+    cat > /ets/init.d/wgui <<BLOCK
+#!/sbin/openrc-run
+description="A wireguard service which will be autorestart on config changes"
+
+pidfile="/run/${RC_SVCNAME}.pid"
+command="/opt/wireguard/wgui"
+command_args=""
+command_background=yes
+
+start_pre() {
+    if (ls /sys/class/net | grep wg0 >/dev/null); then
+        echo "wg0 interface is already up. Restarting !!!"
+        wg-quick down wg0
+    fi
+    wg-quick up wg0
+}
+
+stop_post() {
+    if ! (ls /sys/class/net | grep wg0 >/dev/null); then
+        echo "wg0 interface is already down. Skipping !!!"
+    else
+        wg-quick down wg0
+    fi
+}
+BLOCK
+}
+
+create_wgui_restart(){
+    cat > /opt/wireguard/wgui-restart <<BLOCK
+#!/bin/sh
+rc-service wgui restart
+BLOCK
 }
 
 install_dependencies() {
     printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
-    printf "\n\n%b Checking for / Installing Required dependencies for Building...\\n" "${INFO}"
-    install_dependent_packages "${BUILD_DEPS[@]}"
     printf "\n\n%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
     install_dependent_packages "${INSTALLER_DEPS[@]}"
     printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
     install_dependent_packages "${WG_DEPS[@]}"
-}
-
-build_wireguard_tools() {
-    echo "wireguard" >>/etc/modules
-    echo "**** install wireguard-tools ****"
-    if [ -z ${WIREGUARD_RELEASE+x} ]; then
-        WIREGUARD_RELEASE=$(curl -sX GET "https://api.github.com/repos/WireGuard/wireguard-tools/tags" | jq -r .[0].name)
-    fi
-    mkdir /app
-    cd /app
-    git clone https://git.zx2c4.com/wireguard-tools
-    cd wireguard-tools
-    git checkout "${WIREGUARD_RELEASE}"
-    sed -i 's|\[\[ $proto == -4 \]\] && cmd sysctl -q net\.ipv4\.conf\.all\.src_valid_mark=1|[[ $proto == -4 ]] \&\& [[ $(sysctl -n net.ipv4.conf.all.src_valid_mark) != 1 ]] \&\& cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1|' src/wg-quick/linux.bash
-    make -C src -j$(nproc)
-    make -C src install
 }
 
 show_completion() {
@@ -213,9 +242,38 @@ show_completion() {
     printf "%b Setup completed succesfully\n" "${TICK}"
     MY_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
     printf "  You can access wireguard UI at - http://%b:5000\n" "${MY_IP}"
-    printf "  Username : admin\n"
-    printf "  Password : admin\n"
+    printf "  Username : wg-alpine\n"
+    printf "  Password : wg-alpine\n"
     printf "\n\n"
+}
+
+setup_wireguard() {
+    printf "%b Setup wireguard configurations\n" "${INFO}"
+    printf "  %b Adding iptable to start at boot\n" "${INFO}"
+    rc-update add iptables
+    printf "%b  %b Added iptable to start at boot\n" "${OVER}" "${TICK}"
+
+    printf "  %b Adding environment variables to start wireguard\n" "${INFO}"
+    export WGUI_USERNAME="wg-alpine"
+    export WGUI_PASSWORD="wg-alpine"
+    export WGUI_SERVER_POST_UP_SCRIPT="iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;iptables -A FORWARD -o wg0 -j ACCEPT"
+    export WGUI_SERVER_POST_DOWN_SCRIPT="iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;iptables -D FORWARD -o wg0 -j ACCEPT"
+    printf "%b  %b  Added environment variables to start wireguard\n" "${OVER}" "${TICK}"
+
+    printf "  %b Adding sysctl confugrations\n" "${INFO}"
+    echo "net.ipv4.ip_forward = 1" >>/etc/sysctl.conf
+    echo "net.ipv6.conf.all.forwarding = 1" >>/etc/sysctl.conf
+    echo "net.ipv4.conf.all.proxy_arp = 1" >>/etc/sysctl.conf
+    rc-update add sysctl
+    rc-service sysctl restart
+    printf "%b  %b Added sysctl confugrations\n" "${OVER}" "${TICK}"
+
+    printf "  %b Allowing to IPv4 forwarding\n" "${INFO}"
+    sed -i 's/IPFORWARD="no"/IPFORWARD="yes"/g' /etc/conf.d/iptables
+    /etc/init.d/iptables save
+    rc-service iptables restart
+    printf "%b  %b Allowed to IPv4 forwarding\n" "${OVER}" "${TICK}"
+
 }
 
 start_setup() {
@@ -224,7 +282,7 @@ start_setup() {
     os_check
     package_manager_detect
     install_dependencies
-    build_wireguard_tools
+    setup_wireguard
     download_wireguard_ui
     setup_wgui
     enable_service "wg-alpine"
