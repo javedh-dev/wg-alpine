@@ -53,7 +53,7 @@ package_manager_detect() {
         PKG_INSTALL=("${PKG_MANAGER}" add)
         PKG_COUNT="${PKG_MANAGER} upgrade --simulate --no-progress | head -n -1 | wc -l"
         INSTALLER_DEPS=(curl git jq openrc grep tar)
-        WG_DEPS=(wget wireguard-tools)
+        WG_DEPS=(wget wireguard-tools iptables)
     # If apk package managers was not found
     else
         # we cannot install required packages
@@ -174,7 +174,8 @@ setup_wgui() {
     printf "\n  %b Creating wg-alpine service" "${INFO}"
     cd /etc/init.d/
     echo '#!/sbin/openrc-run' >wg-alpine
-    echo 'command=/usr/local/bin/wg-alpine' >>wg-alpine
+    echo 'command=/sbin/inotifyd' >>wg-alpine
+    echo 'command_args="/usr/local/bin/wg-alpine /etc/wireguard/wg0.conf:w"' >>wg-alpine
     echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine
     echo 'command_background=yes' >>wg-alpine
     chmod +x wg-alpine
@@ -199,12 +200,41 @@ show_completion() {
     printf "\n\n"
 }
 
+setup_wireguard() {
+    printf "%b Setup wireguard configurations\n" "${INFO}"
+    printf "  %b Adding iptable to start at boot\n" "${INFO}"
+    rc-update add iptables
+    printf "%b  %b Added iptable to start at boot\n" "${OVER}" "${TICK}"
+
+    printf "  %b Adding environment variables to start wireguard\n" "${INFO}"
+    export WGUI_USERNAME="wg-alpine"
+    export WGUI_PASSWORD="wg-alpine"
+    export WGUI_SERVER_POST_UP_SCRIPT="iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;iptables -A FORWARD -o wg0 -j ACCEPT"
+    export WGUI_SERVER_POST_DOWN_SCRIPT="iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;iptables -D FORWARD -o wg0 -j ACCEPT"
+    printf "%b  %b  Added environment variables to start wireguard\n" "${OVER}" "${TICK}"
+
+    printf "  %b Adding sysctl confugrations\n" "${INFO}"
+    echo "net.ipv4.ip_forward = 1" >>/etc/sysctl.conf
+    echo "net.ipv6.conf.all.forwarding = 1" >>/etc/sysctl.conf
+    echo "net.ipv4.conf.all.proxy_arp = 1" >>/etc/sysctl.conf
+    rc-update add sysctl
+    printf "%b  %b Added sysctl confugrations\n" "${OVER}" "${TICK}"
+
+    printf "  %b Allowing to IPv4 forwarding\n" "${INFO}"
+    sed -i 's/IPFORWARD="no"/IPFORWARD="yes"/g' /etc/conf.d/iptables
+    /etc/init.d/iptables save
+    rc-service iptables restart
+    printf "%b  %b Allowed to IPv4 forwarding\n" "${OVER}" "${TICK}"
+
+}
+
 start_setup() {
     clear
     show_ascii_logo
     os_check
     package_manager_detect
     install_dependencies
+    setup_wireguard
     download_wireguard_ui
     setup_wgui
     enable_service "wg-alpine"
