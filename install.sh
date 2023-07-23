@@ -60,7 +60,8 @@ package_manager_detect() {
 
 update_alpine() {
     printf "\n\n%b Updating alpine linux\n" "${INFO}"
-    apk update && apk upgrade &>/dev/null
+    apk update &>/dev/null
+    apk upgrade &>/dev/null
     printf "%b%b Updated alpine linux" "${OVER}" "${TICK}"
 }
 
@@ -273,6 +274,7 @@ show_completion() {
     
     printf "\n\n%b System Reboot is required. \n\n\n" "${INFO}"
     read -p "Press 'y' reboot...." ans
+
     if [[ $ans == 'y' ]]; then
         reboot
     fi
