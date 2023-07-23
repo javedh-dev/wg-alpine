@@ -186,9 +186,6 @@ description="A wireguard service which will be autorestart on config changes"
 
 pidfile="/run/\${RC_SVCNAME}.pid"
 command="/opt/wireguard/wgui"
-command_args="
-
-"
 command_background=yes
 output_log="/var/log/wgui.log"
 error_log="/var/log/wgui.log"
@@ -213,8 +210,7 @@ start_pre() {
 stop_post() {
     if ! (ls /sys/class/net | grep wg0 >/dev/null); then
         echo "wg0 interface is already down. Skipping !!!"
-    fi
-    if (ls /etc/wireguard/wg0.conf &>/dev/null); then
+    else if (ls /etc/wireguard/wg0.conf &>/dev/null); then
         wg-quick down wg0
     fi
 }
@@ -244,10 +240,10 @@ enable_service() {
     printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
 }
 
-# Enable service so that it will start with next reboot
+# Start service so that it will start with next reboot
 start_service() {
     printf "  %b Starting ${1} service to start on reboot..." "${INFO}" "${str}"
-    rc-update add "${1}" &>/dev/null
+    rc-service "${1}" start &>/dev/null
     printf "%b  %b Started ${1} service to start on reboot...\\n" "${OVER}" "${TICK}" "${str}"
 }
 
@@ -293,7 +289,7 @@ show_completion() {
     printf "%b Setup completed succesfully\n" "${TICK}"
     
     MY_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
-    printf "\t\tYou can access wireguard UI at - https://%b:5000\n" "${MY_IP}"
+    printf "\t\tYou can access wireguard UI at - http://%b:5000\n" "${MY_IP}"
     printf "\t\tUsername : wg-alpine\n"
     printf "\t\tPassword : wg-alpine\n"
 }
