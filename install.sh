@@ -182,7 +182,7 @@ create_wgui_service(){
 #!/sbin/openrc-run
 description="A wireguard service which will be autorestart on config changes"
 
-pidfile="/run/${RC_SVCNAME}.pid"
+pidfile="/run/\${RC_SVCNAME}.pid"
 command="/opt/wireguard/wgui"
 command_background=yes
 
@@ -214,7 +214,7 @@ create_wgui_watch_service(){
 #!/sbin/openrc-run
 description="A wireguard UI watcher service"
 
-pidfile="/run/${RC_SVCNAME}.pid"
+pidfile="/run/\${RC_SVCNAME}.pid"
 command="/sbin/inotifyd"
 command_args="/opt/wireguard/restart_wgui /etc/wireguard/wg0.conf:w"
 command_background=yes
