@@ -59,7 +59,7 @@ package_manager_detect() {
 }
 
 update_alpine() {
-    printf "\n\n%b Updating alpine linux\n" "${INFO}"
+    printf "\n\n%b Updating alpine linux" "${INFO}"
     apk update &>/dev/null
     apk upgrade &>/dev/null
     printf "%b%b Updated alpine linux" "${OVER}" "${TICK}"
@@ -278,7 +278,7 @@ show_completion() {
     if [[ $ans == 'y' ]]; then
         reboot
     fi
-    printf "\n\n\n"
+    # printf "\n\n\n"
 }
 
 
