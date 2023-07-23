@@ -59,8 +59,9 @@ package_manager_detect() {
 }
 
 update_alpine() {
-    printf "\n\n%b Updating alpine linux" "${INFO}"
-    apk update && apk upgrade
+    printf "\n\n%b Updating alpine linux\n" "${INFO}"
+    apk update && apk upgrade &>/dev/null
+    printf "%b%b Updated alpine linux" "${OVER}" "${TICK}"
 }
 
 install_dependent_packages() {
@@ -270,8 +271,8 @@ show_completion() {
     show_ascii_logo
     printf "%b Setup completed succesfully\n" "${TICK}"
     
-    printf "\n\n%b System Reboot is required. Press 'y' reboot....\n\n\n" "${INFO}"
-    read -n1 -rp "Press any key to continue..." ans
+    printf "\n\n%b System Reboot is required. \n\n\n" "${INFO}"
+    read -p "Press 'y' reboot...." ans
     if [[ $ans == 'y' ]]; then
         reboot
     fi
