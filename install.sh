@@ -6,6 +6,7 @@ TICK="[${COL_LIGHT_GREEN}✓${COL_NC}]"
 CROSS="[${COL_LIGHT_RED}✗${COL_NC}]"
 INFO="[i]"
 OVER="\\r\\033[K"
+TEMP_DIR="/opt/wireguard/temp"
 
 show_ascii_logo() {
     echo -e "
@@ -16,19 +17,6 @@ show_ascii_logo() {
     (_/\_) \___/       \_/\_/\____/(__)  (__) \_)__)(____)
      ${COL_NC}     
 "
-}
-
-update_alpine() {
-    printf "\n\n%b Updating alpine linux" "${INFO}"
-    #sudo apt-get update && sudo apt-get upgrade -y
-}
-
-is_command() {
-    # Checks to see if the given command (passed as a string argument) exists on the system.
-    # The function returns 0 (success) if the command exists, and 1 if it doesn't.
-    local check_command="$1"
-
-    command -v "${check_command}" >/dev/null 2>&1
 }
 
 os_check() {
@@ -42,6 +30,13 @@ os_check() {
     else
         printf "%b%b OS : %b-%b " "${OVER}" "${TICK}" "${detected_os}" "${detected_version}"
     fi
+}
+is_command() {
+    # Checks to see if the given command (passed as a string argument) exists on the system.
+    # The function returns 0 (success) if the command exists, and 1 if it doesn't.
+    local check_command="$1"
+
+    command -v "${check_command}" >/dev/null 2>&1
 }
 
 package_manager_detect() {
@@ -63,22 +58,9 @@ package_manager_detect() {
     fi
 }
 
-# Start/Restart service passed in as argument
-restart_service() {
-    # Local, named variables
-    local str="Restarting ${1} service"
-    printf "  %b %s..." "${INFO}" "${str}"
-    service "${1}" restart &>/dev/null
-    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
-}
-
-# Enable service so that it will start with next reboot
-enable_service() {
-    # Local, named variables
-    local str="Enabling ${1} service to start on reboot"
-    printf "  %b %s..." "${INFO}" "${str}"
-    rc-update add "${1}" &>/dev/null
-    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
+update_alpine() {
+    printf "\n\n%b Updating alpine linux" "${INFO}"
+    apk update && apk upgrade
 }
 
 install_dependent_packages() {
@@ -114,6 +96,41 @@ install_dependent_packages() {
     return 0
 }
 
+install_dependencies() {
+    printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
+    printf "\n\n%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
+    install_dependent_packages "${INSTALLER_DEPS[@]}"
+    printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
+    install_dependent_packages "${WG_DEPS[@]}"
+}
+
+setup_wireguard() {
+    printf "%b Setup wireguard configurations\n" "${INFO}"
+    printf "  %b Adding iptable to start at boot\n" "${INFO}"
+    rc-update add iptables default &>/dev/null
+    printf "%b  %b Added iptable to start at boot\n" "${OVER}" "${TICK}"
+
+    printf "  %b Adding environment variables to start wireguard\n" "${INFO}"
+    export WGUI_USERNAME="wg-alpine" &>/dev/null
+    export WGUI_PASSWORD="wg-alpine" &>/dev/null
+    export WGUI_SERVER_POST_UP_SCRIPT="iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;iptables -A FORWARD -o wg0 -j ACCEPT" &>/dev/null
+    export WGUI_SERVER_POST_DOWN_SCRIPT="iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;iptables -D FORWARD -o wg0 -j ACCEPT" &>/dev/null
+    printf "%b  %b Added environment variables to start wireguard\n" "${OVER}" "${TICK}"
+
+    printf "  %b Adding sysctl confugrations\n" "${INFO}"
+    echo "net.ipv4.ip_forward = 1" >>/etc/sysctl.conf
+    echo "net.ipv6.conf.all.forwarding = 1" >>/etc/sysctl.conf
+    echo "net.ipv4.conf.all.proxy_arp = 1" >>/etc/sysctl.conf
+    printf "%b  %b Added sysctl confugrations\n" "${OVER}" "${TICK}"
+
+    printf "  %b Allowing to IPv4 forwarding\n" "${INFO}"
+    sed -i 's/IPFORWARD="no"/IPFORWARD="yes"/g' /etc/conf.d/iptables &>/dev/null
+    /etc/init.d/iptables save &>/dev/null
+    rc-service iptables restart &>/dev/null
+    printf "%b  %b Allowed to IPv4 forwarding\n" "${OVER}" "${TICK}"
+
+}
+
 get_architecture() {
     ARCH=$(uname -m)
     if (ARCH=='x86_64'); then
@@ -137,12 +154,12 @@ download_wireguard_ui() {
 
     printf "\n  %b Determining os architecture to download..." "${INFO}"
     OS_ARCH=$(get_architecture)
-    printf "%b  %b OS Architecture : %b" "${OVER}" "${TICK}" "${OS_ARCH}"
+    printf "%b  %b OS Architecture : \"%b\"" "${OVER}" "${TICK}" "${OS_ARCH}"
 
     printf "\n  %b Setting up temp directory" "${INFO}"
-    rm -rf /opt/wireguard/temp
-    mkdir -p /opt/wireguard/temp
-    cd /opt/wireguard/temp
+    rm -rf ${TEMP_DIR}
+    mkdir -p ${TEMP_DIR}
+    cd ${TEMP_DIR}
     printf "%b  %b Temp directory setup successfully" "${OVER}" "${TICK}"
 
     printf "\n  %b Determining download url" "${INFO}"
@@ -150,6 +167,65 @@ download_wireguard_ui() {
     printf "%b  %b Downloading from url - \"%b\"\n" "${OVER}" "${INFO}" "${DOWNLOAD_URL}"
     wget -p -q ${DOWNLOAD_URL} -O wireguard-ui.tar.gz
     printf "%b%b  %b Download complete\n" "${OVER}" "${OVER}" "${TICK}"
+}
+
+
+create_wgui_restart(){
+    cat > /opt/wireguard/wgui-restart <<BLOCK
+#!/bin/sh
+rc-service wgui restart
+BLOCK
+}
+
+create_wgui_service(){
+    cat > /etc/init.d/wgui <<BLOCK
+#!/sbin/openrc-run
+description="A wireguard service which will be autorestart on config changes"
+
+pidfile="/run/${RC_SVCNAME}.pid"
+command="/opt/wireguard/wgui"
+command_args=""
+command_background=yes
+
+start_pre() {
+    if (ls /sys/class/net | grep wg0 >/dev/null); then
+        echo "wg0 interface is already up. Restarting !!!"
+        wg-quick down wg0
+    fi
+    wg-quick up wg0
+}
+
+stop_post() {
+    if ! (ls /sys/class/net | grep wg0 >/dev/null); then
+        echo "wg0 interface is already down. Skipping !!!"
+    else
+        wg-quick down wg0
+    fi
+}
+BLOCK
+}
+
+create_wgui_watch_service(){
+    cat > /etc/init.d/wgui_watch <<BLOCK
+#!/sbin/openrc-run
+description="A wireguard UI watcher service"
+
+pidfile="/run/${RC_SVCNAME}.pid"
+command="/sbin/inotifyd"
+command_args="/opt/wireguard/restart_wgui /etc/wireguard/wg0.conf:w"
+command_background=yes
+output_log="/var/log/wgui-watch.log"
+error_log="/var/log/wgui-watch.err"
+BLOCK
+}
+
+# Enable service so that it will start with next reboot
+enable_service() {
+    # Local, named variables
+    local str="Enabling ${1} service to start on reboot"
+    printf "  %b %s..." "${INFO}" "${str}"
+    rc-update add "${1}" &>/dev/null
+    printf "%b  %b %s...\\n" "${OVER}" "${TICK}" "${str}"
 }
 
 setup_wgui() {
@@ -162,107 +238,45 @@ setup_wgui() {
     cp wgui ../wgui
     printf "%b  %b Extracted Successfully" "${OVER}" "${TICK}"
 
-    printf "\n  %b Creating wg-alpine executable" "${INFO}"
-    cd /usr/local/bin/
-    echo '#!/bin/sh' >wg-alpine
-    echo 'cat /run/wg-alpine.pid > kill' >>wg-alpine
-    echo 'wg-quick down wg0' >>wg-alpine
-    echo 'wg-quick up wg0' >>wg-alpine
-    echo '/opt/wireguard/wgui' >>wg-alpine
-    chmod +x wg-alpine
-    printf "%b  %b Executable created successfully." "${OVER}" "${TICK}"
+    printf "\n  %b Creating a service restarter" "${INFO}"
+    create_wgui_restart
+    chmod +x /opt/wireguard/wgui-restart
+    printf "%b  %b Created a service restarter" "${OVER}" "${TICK}"
 
-    printf "\n  %b Creating wg-alpine service" "${INFO}"
-    cd /etc/init.d/
-    echo '#!/sbin/openrc-run' >wg-alpine
-    echo 'command="/usr/local/bin/wg-alpine"' >>wg-alpine
-    echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine
-    echo 'command_background=yes' >>wg-alpine
-    echo 'output_log="/var/log/wg-alpine.log"' >>wg-alpine
-    echo 'error_log="/var/log/wg-alpine.err"' >>wg-alpine
-    chmod +x wg-alpine
-    printf "%b  %b Service created successfully." "${OVER}" "${TICK}"
+    printf "\n  %b Creating wgui and watch services" "${INFO}"
+    create_wgui_service
+    create_wgui_watch_service
+    chmod +x /etc/init.d/wgui
+    chmod +x /etc/init.d/wgui_watch
+    printf "%b  %b Created wgui and watch services" "${OVER}" "${TICK}"
 
-    printf "\n  %b Creating wg-alpine-watcher service" "${INFO}"
-    cd /etc/init.d/
-    echo '#!/sbin/openrc-run' >wg-alpine-watcher
-    echo 'command=/sbin/inotifyd' >>wg-alpine-watcher
-    echo 'command_args="/usr/local/bin/wg-alpine /etc/wireguard/wg0.conf:w"' >>wg-alpine-watcher
-    echo 'pidfile=/run/${RC_SVCNAME}.pid' >>wg-alpine-watcher
-    echo 'command_background=yes' >>wg-alpine-watcher
-    echo 'output_log="/var/log/wg-alpine-watcher.log"' >>wg-alpine-watcher
-    echo 'error_log="/var/log/wg-alpine-watcher.err"' >>wg-alpine-watcher
-    echo '' >>wg-alpine-watcher
-    echo 'depend() {' >>wg-alpine-watcher
-    echo '  need wg-alpine' >>wg-alpine-watcher
-    echo '}' >>wg-alpine-watcher
-    chmod +x wg-alpine-watcher
-    printf "%b  %b wg-alpine-watcher Service created successfully." "${OVER}" "${TICK}"
-
-    printf "\n  %b Enabling services to start at boot" "${INFO}"
-    rc-update add wg-alpine
-    rc-update add wg-alpine-watcher
+    printf "\n  %b Enabling services to start at boot" "${INFO}" 
+    enable_service "wgui"
+    enable_service "wgui-watch"
     printf "%b  %b Enabled services to start at boot" "${OVER}" "${TICK}"
-}
-
-install_dependencies() {
-    printf "\n\n%b Setup will install Wireguard VPN with wireguard UI" "${INFO}"
-    printf "\n\n%b Checking for / Installing Required dependencies for Installer...\\n" "${INFO}"
-    install_dependent_packages "${INSTALLER_DEPS[@]}"
-    printf "\n\n%b Checking for / Installing Required dependencies for Wireguard...\\n" "${INFO}"
-    install_dependent_packages "${WG_DEPS[@]}"
 }
 
 show_completion() {
     show_ascii_logo
     printf "%b Setup completed succesfully\n" "${TICK}"
-    MY_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
-    printf "  You can access wireguard UI at - http://%b:5000\n" "${MY_IP}"
-    printf "  Username : wg-alpine\n"
-    printf "  Password : wg-alpine\n"
-    printf "\n\n"
+    
+    printf "\n\n%b System Reboot is required. Press any key to reboot....\n\n\n" "${INFO}"
+    read -n1 ans
+    reboot
 }
 
-setup_wireguard() {
-    printf "%b Setup wireguard configurations\n" "${INFO}"
-    printf "  %b Adding iptable to start at boot\n" "${INFO}"
-    rc-update add iptables
-    printf "%b  %b Added iptable to start at boot\n" "${OVER}" "${TICK}"
 
-    printf "  %b Adding environment variables to start wireguard\n" "${INFO}"
-    export WGUI_USERNAME="wg-alpine"
-    export WGUI_PASSWORD="wg-alpine"
-    export WGUI_SERVER_POST_UP_SCRIPT="iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;iptables -A FORWARD -o wg0 -j ACCEPT"
-    export WGUI_SERVER_POST_DOWN_SCRIPT="iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;iptables -D FORWARD -o wg0 -j ACCEPT"
-    printf "%b  %b  Added environment variables to start wireguard\n" "${OVER}" "${TICK}"
-
-    printf "  %b Adding sysctl confugrations\n" "${INFO}"
-    echo "net.ipv4.ip_forward = 1" >>/etc/sysctl.conf
-    echo "net.ipv6.conf.all.forwarding = 1" >>/etc/sysctl.conf
-    echo "net.ipv4.conf.all.proxy_arp = 1" >>/etc/sysctl.conf
-    rc-update add sysctl
-    rc-service sysctl restart
-    printf "%b  %b Added sysctl confugrations\n" "${OVER}" "${TICK}"
-
-    printf "  %b Allowing to IPv4 forwarding\n" "${INFO}"
-    sed -i 's/IPFORWARD="no"/IPFORWARD="yes"/g' /etc/conf.d/iptables
-    /etc/init.d/iptables save
-    rc-service iptables restart
-    printf "%b  %b Allowed to IPv4 forwarding\n" "${OVER}" "${TICK}"
-
-}
 
 start_setup() {
     clear
     show_ascii_logo
     os_check
     package_manager_detect
+    update_alpine
     install_dependencies
     setup_wireguard
     download_wireguard_ui
     setup_wgui
-    enable_service "wg-alpine"
-    restart_service "wg-alpine"
     show_completion
 
 }
