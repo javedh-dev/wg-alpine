@@ -272,9 +272,10 @@ show_completion() {
     
     printf "\n\n%b System Reboot is required. Press 'y' reboot....\n\n\n" "${INFO}"
     read -n1 -rp "Press any key to continue..." ans
-    if [ ${ans} = 'y' ]; then
+    if [[ $ans == 'y' ]]; then
         reboot
     fi
+    printf "\n\n\n"
 }
 
 
