@@ -273,8 +273,9 @@ show_completion() {
     printf "%b Setup completed succesfully\n" "${TICK}"
     
     printf "\n\n%b System Reboot is required. \n\n\n" "${INFO}"
-    read -p "Reboot? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || reboot
 
+    read -p "Reboot? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || reboot
+    echo $confirm
     # printf "\n\n\n"
 }
 
